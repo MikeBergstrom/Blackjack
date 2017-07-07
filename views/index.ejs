@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Group Chat</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script type ="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script type ="text/javascript">
+        var socket = io.connect();
+     $(document).ready(function (){
+        var name = prompt("What is your name?");
+        socket. emit("new_user", {name:name});
+        socket.on("server_response", function(){
+            console.log("response received");
+            html_str ="<ul><li>"+ name+"</li><li id='player_hand'>Hand:</li><li id='player_total'>Hand Value:</li><li id='player_buttons' style='list-style:none'><button id='start'>Start Game</button></li></ul>"
+            $('#players').append(html_str);
+        });
+        $(document).on("click", '#start',function(){
+            socket.emit("start_game", name);
+        });
+        socket.on("deal", function(data){
+            let dealer_hand_str = "Hand: "
+            for (let i=0; i<data['dealer_hand'].length; i++){
+                dealer_hand_str+= data['dealer_hand'][i].name + " | "
+            } 
+            $('#dealer_hand').text(dealer_hand_str);
+            let dealer_total = 0;
+            for (let i=0; i<data['dealer_hand'].length; i++){
+                dealer_total += data['dealer_hand'][i].value
+            }
+            $('#dealer_total').text("Hand Value: " + dealer_total);
+            
+             let player_hand_str = "Hand: "
+            for (let i=0; i<data['player_hand'].length; i++){
+                player_hand_str+= data['player_hand'][i].name + " | "
+            } 
+            $('#player_hand').text(player_hand_str);
+            let player_total = 0;
+            for (let i=0; i<data['player_hand'].length; i++){
+                player_total += data['player_hand'][i].value
+            }
+            $('#player_total').text("Hand Value: " + player_total);
+            $('#player_buttons').html("<button id='draw'>Draw</button><button id='stand'>Stand</button>")
+        });
+        $(document).on('click', '#draw', function(){
+            socket.emit("draw", Math.random()*1000);
+            console.log("drawing");
+        });
+        socket.on("new_card", function(results){
+            console.log("received new card", results);
+            if (results.player_status == "busted"){
+                alert("You Busted! :(");
+                let player_bust_str = "Hand: "
+                for (let i=0; i<results['player_hand'].length; i++){
+                    player_bust_str+= results['player_hand'][i].name + " | "
+                } 
+                $('#player_hand').text(player_bust_str);
+                $('#player_total').text("Hand Value: " + results.player_total);
+                $('#player_buttons').html("<button id='start'>Start a New Game (Refresh for new player)</button>")
+            } else{
+                let player_draw_str = "Hand: "
+                for (let i=0; i<results['player_hand'].length; i++){
+                    player_draw_str+= results['player_hand'][i].name + " | "
+                } 
+                $('#player_hand').text(player_draw_str);
+                $('#player_total').text("Hand Value: " + results.player_total);
+            };
+        });
+     })
+
+     </script>
+</head>
+<body>
+    <h1>BlackJack</h1>
+    <div id="dealer">
+        <ul>
+            <li>DEALER</li>
+            <li id='dealer_hand'>Hand:</li>
+            <li id='dealer_total'>Hand Value:</li>
+        </ul>
+    </div>
+    <div id="players">
+    </div>
+
+</body>
+
+</html>
