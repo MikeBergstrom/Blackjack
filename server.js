@@ -12,6 +12,7 @@ app. use(express.static(path. join(__dirname  +  "./static")));
 // setting up ejs and our views folder
 app.set( 'views', path. join(__dirname,  './views'));
 app.set( 'view engine',  'ejs');
+
 // root route to render the index.ejs view
 app.get( '/', function(req, res) {
  res. render( "index");
@@ -129,39 +130,39 @@ io.sockets.on('connection', function(socket){
     });
     socket.on("start_game", function(req, name){
             console.log("start game received")
-            req.session.new_deck = "";
-            req.session.dealer = new Player();
-            req.session.player = new Player(name);
-            req.session.player.hand = [];
-            req.session.dealer.hand = [];
-            req.session.player.value = 0;
-            req.session.dealer.value = 0;
-            req.session.dealer.draw(new_deck);
-            req.session.player.draw(new_deck);
-            req.session.dealer.draw(new_deck);
-            req.session.player.draw(new_deck);
-            req.session.player.status = "";
+            new_deck = new Deck();
+            dealer = new Player();
+            player = new Player(name);
+            player.hand = [];
+            dealer.hand = [];
+            player.value = 0;
+            dealer.value = 0;
+            dealer.draw(new_deck);
+            player.draw(new_deck);
+            dealer.draw(new_deck);
+            player.draw(new_deck);
+            player.status = "";
             // console.log(player.hand);
             // console.log(dealer.hand);
-            socket.emit("deal", {dealer_hand:req.session.dealer.hand, player_hand:req.session.player.hand})
+            socket.emit("deal", {dealer_hand:dealer.hand, player_hand:player.hand})
         });    
     socket.on("draw", function(data){
             // console.log(player);
             console.log("draw", data);
-            req.session.player.draw(req.session.new_deck);
+            player.draw(new_deck);
             // console.log(player.hand);
-            req.session.player.total = 0;
-            for (let i=0; i<req.session.player.hand.length;i++){
-                req.session.player.total += req.session.player.hand[i].value;
+            player.total = 0;
+            for (let i=0; i<player.hand.length;i++){
+                player.total += player.hand[i].value;
             }
             // console.log(player.total);
-            if (req.session.player.total > 21){
-                req.session.player.status= "busted";
+            if (player.total > 21){
+                player.status= "busted";
             }
             // console.log("sent",player.status);
             // console.log("sent",player.hand);
             // console.log("sent",player.total);
-            socket.emit("new_card", {player_status: req.session.player.status, player_hand:req.session.player.hand, player_total:player.total})   
+            socket.emit("new_card", {player_status: player.status, player_hand:player.hand, player_total:player.total})   
         });
 
 })
