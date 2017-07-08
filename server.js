@@ -7,7 +7,7 @@ var app  =  express();
 var session = require('express-session')
 app.use(session({secret:'sosecret'}));
 // static content 
-app. use(express.static(path. join(__dirname  +  "./static")));
+app. use(express.static(path. join(__dirname  +  "/static")));
 
 // setting up ejs and our views folder
 app.set( 'views', path. join(__dirname,  './views'));
@@ -36,7 +36,7 @@ var server = app. listen(8000, function() {
                     var card = "Ace";
                     var value = 1;
                     for (let j = 0; j < 4; j++){
-                        let new_card = {"name": card + " of " + suits[j], "value": value};
+                        let new_card = {"name": card + " of " + suits[j], "value": value, image:suits[j][0]+"1"};
                     this.cards.push(new_card);
                 }
                 }
@@ -44,7 +44,7 @@ var server = app. listen(8000, function() {
                     var card = "Jack";
                     var value = 10;
                     for (let j = 0; j < 4; j++){
-                    let new_card = {"name": card + " of " + suits[j], "value": value};
+                    let new_card = {"name": card + " of " + suits[j], "value": value, image:suits[j][0]+"j"};
                     this.cards.push(new_card);
                 }
                 }
@@ -52,7 +52,7 @@ var server = app. listen(8000, function() {
                     var card = "Queen";
                     var value = 10;
                     for (let j = 0; j < 4; j++){
-                        let new_card = {"name": card + " of " + suits[j], "value": value};
+                        let new_card = {"name": card + " of " + suits[j], "value": value, image:suits[j][0]+"q"};
                     this.cards.push(new_card);
                 }
                 }
@@ -60,7 +60,7 @@ var server = app. listen(8000, function() {
                     var card = "King";
                     var value = 10;
                     for (let j = 0; j < 4; j++){
-                    let new_card = {"name": card + " of "+ suits[j], "value": value};
+                    let new_card = {"name": card + " of "+ suits[j], "value": value, image:suits[j][0]+"k"};
                     this.cards.push(new_card);
                 }
                 }
@@ -68,7 +68,7 @@ var server = app. listen(8000, function() {
                     var card = i;
                     var value = i;
                     for (let j = 0; j < 4; j++){
-                    let new_card = {"name": card + " of "+ suits[j], "value": value};
+                    let new_card = {"name": card + " of "+ suits[j], "value": value,image:suits[j][0]+i};
                     this.cards.push(new_card);
                 }
                 }
@@ -142,7 +142,7 @@ io.sockets.on('connection', function(socket){
             dealer.draw(new_deck);
             player.draw(new_deck);
             player.status = "";
-            // console.log(player.hand);
+            console.log(player.hand);
             // console.log(dealer.hand);
             socket.emit("deal", {dealer_hand:dealer.hand, player_hand:player.hand})
         });    
@@ -152,8 +152,17 @@ io.sockets.on('connection', function(socket){
             player.draw(new_deck);
             // console.log(player.hand);
             player.total = 0;
+            let player_ace_count = 0;
             for (let i=0; i<player.hand.length;i++){
+                if(player.hand[i].value ==1){
+                    player_ace_count++;
+                }
                 player.total += player.hand[i].value;
+            }
+            for(let i=0;i<player_ace_count;i++){
+                if(player.total<12){
+                    player.total+=10;
+                }
             }
             // console.log(player.total);
             if (player.total > 21){
@@ -162,7 +171,7 @@ io.sockets.on('connection', function(socket){
             // console.log("sent",player.status);
             // console.log("sent",player.hand);
             // console.log("sent",player.total);
-            socket.emit("new_card", {player_status: player.status, player_hand:player.hand, player_total:player.total})   
+            socket.emit("new_card", {player_status: player.status, player_hand:player.hand, player_total:player.total, dealer_hand:dealer.hand})   
         });
 
 })
