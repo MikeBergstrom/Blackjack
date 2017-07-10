@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Group Chat</title>
+    <title>Blackjack</title>
     <link rel="stylesheet" type="text/css" href="style.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script type ="text/javascript" src="/socket.io/socket.io.js"></script>
@@ -12,21 +12,92 @@
      $(document).ready(function (){
         var name = prompt("What is your name?");
         socket. emit("new_user", {name:name});
-        socket.on("server_response", function(){
+        socket.on("server_response", function(players){
+            console.log(players);
             console.log("response received");
-            html_str ="<ul><li>"+ name+"</li><li id='player_hand'>Hand:</li><li id='player_total'>Hand Value:</li><li id='player_buttons' style='list-style:none'><button id='start'>Start Game</button></li></ul>"
-            $('#players').append(html_str);
+            console.log(socket.id);
+            for(let i=0;i<players.players.length;i++){
+                if (players.players[i].socket == socket.id){
+                    html_str ="<ul style='list-style:none;'><li><h2>"+ players.players[i].name+"</h2></li><li id='player_hand'><h2>Hand:</h2></li><li id='player_total'><h2>Hand Value:</h2></li><li id='player_buttons' style='list-style:none'><button id='start'>Start Game</button></li></ul>"
+                    $('#players').prepend(html_str);
+                } else {
+                html_str ="<ul style='list-style:none;'><li><h2>"+ players.players[i].name+"</h2></li><li id='player_hand'><h2>Hand:</h2></li><li id='player_total'><h2>Hand Value:</h2></li><li>Status:"+players.players[i].status+"</li></ul>"
+                $('#players').append(html_str);
+            }
+            }
         });
+
+        socket.on("new_player", function(data){
+            html_str ="<ul style='list-style:none;'><li><h2>"+ data.new_player.name+"</h2></li><li id='player_hand'><h2>Hand:</h2></li><li id='player_total'><h2>Hand Value:</h2></li><li>Status:"+data.new_player.status+"</li></ul>"
+            $('#players').append(html_str);
+        })
+
+        socket.on("game_updated", function(data){
+            $('#players').html("");
+            console.log("game_updated");
+            let dealer_hand_str = ""
+            dealer_hand_str+= "<img src='images/b1pl.png' height='150' >";
+            dealer_hand_str+= "<img src='images/"+data['dealer'].hand[0].image + ".png' height='150' >";
+            $('#dealer_hand').html(dealer_hand_str);
+            $('#dealer_total').text("Hand Value: " + data['dealer'].hand[0].value);
+            for (let i=0;i<data['players'].length;i++){
+                html_str =""
+                let player_hand_str = ""
+                for (let j=0; j<data['players'][i].hand.length; j++){
+                    player_hand_str+= "<img src='images/"+data['players'][i].hand[j].image + ".png' height='150' >"
+                } 
+
+                if (data['players'][i].socket == socket.id){
+                    console.log("in socket match");
+                    if (data['players'][i].status == "current"){
+                        console.log("in current");
+                        html_str ="<ul style='list-style:none;'><li><h2>"+ data.players[i].name+"</h2></li><li id='player_hand'><h2>"+player_hand_str+"</h2></li><li id='player_total'><h2>Hand Value:"+data['players'][i].total+"</h2></li><li><button id='draw'>Hit</button><button id='stay'>Stay</button></li></ul>";
+                        $('#players').prepend(html_str);
+                    } else {
+                        html_str ="<ul style='list-style:none;'><li><h2>"+ data.players[i].name+"</h2></li><li id='player_hand'><h2>"+player_hand_str+"</h2></li><li id='player_total'><h2>Hand Value:"+data['players'][i].total+"</h2></li><li>Status:"+data['players'][i].status+"</li></ul>"
+                    $('#players').prepend(html_str);
+                    }    
+                } else {
+                    html_str ="<ul style='list-style:none;'><li><h2>"+ data.players[i].name+"</h2></li><li id='player_hand'><h2>"+player_hand_str+"</h2></li><li id='player_total'><h2>Hand Value:"+data['players'][i].total+"</h2></li><li>Status:"+data['players'][i].status+"</li></ul>"
+                    $('#players').append(html_str);
+                }
+            }
+        });
+
+        socket.on("game_complete", function(data){
+            console.log("game complete");
+            $('#players').html("");
+            let dealer_hand_str = ""
+            for (let i=0; i<data['dealer'].hand.length;i++){
+                dealer_hand_str+= "<img src='images/"+data['dealer'].hand[i].image + ".png' height='150' >";
+                }
+                $('#dealer_hand').html(dealer_hand_str);
+                $('#dealer_total').text("Hand Value: " + data['dealer'].total);
+            for (let i=0;i<data['players'].length;i++){
+                let player_hand_str = ""
+                    for (let j=0; j<data['players'][i].hand.length; j++){
+                        player_hand_str+= "<img src='images/"+data['players'][i].hand[j].image + ".png' height='150' >"
+                    } 
+                if (data['players'][i].socket == socket.id){
+                        html_str ="<ul style='list-style:none;'><li><h2>"+ data.players[i].name+"</h2></li><li id='player_hand'><h2>"+player_hand_str+"</h2></li><li id='player_total'><h2>Hand Value:"+data['players'][i].total+"</h2></li><li>Status:"+data['players'][i].status+"</li><li><button id='start'>Start Game</button></li></ul>"
+                        $('#players').prepend(html_str);   
+                    } else {
+                        html_str ="<ul style='list-style:none;'><li><h2>"+ data.players[i].name+"</h2></li><li id='player_hand'><h2>"+player_hand_str+"</h2></li><li id='player_total'><h2>Hand Value:"+data['players'][i].total+"</h2></li><li>Status:"+data['players'][i].status+"</li></ul>"
+                        $('#players').append(html_str);
+                    }
+            }
+        });
+
         $(document).on("click", '#start',function(){
             socket.emit("start_game", name);
         });
         socket.on("deal", function(data){
-            let dealer_hand_str = "Hand: "
+            let dealer_hand_str = ""
             dealer_hand_str+= "<img src='images/b1pl.png' height='150' >";
             dealer_hand_str+= "<img src='images/"+data['dealer_hand'][0].image + ".png' height='150' >";
             $('#dealer_hand').html(dealer_hand_str);
             $('#dealer_total').text("Hand Value: " + data['dealer_hand'][0].value);
-             let player_hand_str = "Hand: "
+             let player_hand_str = ""
             for (let i=0; i<data['player_hand'].length; i++){
                 player_hand_str+= "<img src='images/"+data['player_hand'][i].image + ".png' height='150' >"
             } 
@@ -47,18 +118,22 @@
                 }
             }
             $('#player_total').text("Hand Value: " + player_total);
-            $('#player_buttons').html("<button id='draw'>Draw</button><button id='stand'>Stand</button>")
+            $('#player_buttons').html("<button id='draw'>Hit</button><button id='stay'>Stay</button>")
         });
         $(document).on('click', '#draw', function(){
             socket.emit("draw", Math.random()*1000);
             console.log("drawing");
+        });
+        $(document).on('click', '#stay', function(){
+            socket.emit("stay", Math.random()*1000);
+            console.log("staying");
         });
         socket.on("new_card", function(results){
             console.log("received new card", results);
             if (results.player_status == "busted"){
                 console.log(results);
                 alert("You Busted! :(");
-                let player_bust_str = "Hand: ";
+                let player_bust_str = "";
                 for (let i=0; i<results['player_hand'].length; i++){
                     player_bust_str+= "<img src='images/"+results['player_hand'][i].image + ".png' height='150' >"
                 }
@@ -85,7 +160,7 @@
                 $('#dealer_hand').html(dealer_bust_str);
                 $('#dealer_total').text("Hand Value: " + dealer_total);
             } else{
-                let player_draw_str = "Hand: "
+                let player_draw_str = ""
                 for (let i=0; i<results['player_hand'].length; i++){
                     player_draw_str+= "<img src='images/"+results['player_hand'][i].image + ".png' height='150' >"
                 } 
@@ -93,17 +168,51 @@
                 $('#player_total').text("Hand Value: " + results.player_total);
             };
         });
-     })
+        socket.on("dealer_card", function(results){
+            console.log(results);
+            if (results.dealer_total > 21){
+                alert ("Dealer Busted");
+                let dealer_bust_str = "";
+                for (let i=0; i<results['dealer_hand'].length; i++){
+                    dealer_bust_str+= "<img src='images/"+results['dealer_hand'][i].image + ".png' height='150' >"
+                }
+                $('#dealer_hand').html(dealer_bust_str);
+                $('#dealer_total').text("Hand Value: " + results.dealer_total);
+                $('#player_buttons').html("<button id='start'>Start a New Game (Refresh for new player)</button>")
+            } else if (results.dealer_total < 17) {
+                let dealer_bust_str = "";
+                for (let i=0; i<results['dealer_hand'].length; i++){
+                    dealer_bust_str+= "<img src='images/"+results['dealer_hand'][i].image + ".png' height='150' >"
+                }
+                $('#dealer_hand').html(dealer_bust_str);
+                $('#dealer_total').text("Hand Value: " + results.dealer_total);
+                socket.emit("stay");
+            } else {
+                let dealer_bust_str = "";
+                for (let i=0; i<results['dealer_hand'].length; i++){
+                    dealer_bust_str+= "<img src='images/"+results['dealer_hand'][i].image + ".png' height='150' >"
+                }
+                $('#dealer_hand').html(dealer_bust_str);
+                $('#dealer_total').text("Hand Value: " + results.dealer_total);
+                if (results.player_total > results.dealer_total){
+                    alert("You Won!!");
+                } else {
+                    alert("You Lost :(")
+                }
+                $('#player_buttons').html("<button id='start'>Start a New Game (Refresh for new player)</button>")
+            }
+        });
+     });
 
      </script>
 </head>
-<body>
+<body style="background-color:green;">
     <h1>BlackJack</h1>
     <div id="dealer">
-        <ul>
-            <li>DEALER</li>
-            <li id='dealer_hand'>Hand:</li>
-            <li id='dealer_total'>Hand Value:</li>
+        <ul style="list-style:none">
+            <li><h2>DEALER</h2></li>
+            <li id='dealer_hand'><h2>Hand:</h2></li>
+            <li id='dealer_total'><h2>Hand Value:</h2></li>
         </ul>
     </div>
     <div id="players">
