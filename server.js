@@ -121,6 +121,7 @@ var server = app. listen(8000, function() {
         }
     }
 players = [];
+start_status = "ready";
 var io = require('socket.io').listen(server);
 var chats = [];
 io.sockets.on('connection', function(socket){
@@ -144,49 +145,53 @@ io.sockets.on('connection', function(socket){
     });
 
     socket.on("start_game", function(req, name){
-            for (let i=0;i<players.length;i++){
-                if(players[i].socket == socket.id){
-                    players[i].status = "waiting";
-                }
-            }
-
-            let game_status = "ready";
-            for (let i=0;i<players.length;i++){
-                if (players[i].status == "joined"){
-                    game_status = "waiting";
-                }
-            }
-
-            if (game_status == "waiting"){
-                io.emit("status_update", {players:players})
-            } else{
-                dealer = new Player("dealer", 1);
-                new_deck = new Deck();
-                dealer.draw(new_deck);
-                dealer.draw(new_deck);
+            console.log("start status", start_status)
+            if (start_status == "ready" || start_status == "waiting"){
                 for (let i=0;i<players.length;i++){
-                    players[i].hand = [];
-                    players[i].total = 0;
-                    players[i].draw(new_deck);
-                    players[i].draw(new_deck);
-                    let player_ace_count = 0;
-                    for(let j=0;j<players[i].hand.length;j++){
-                        if (players[i].hand[j].value == 1){
-                            player_ace_count++;
-                        }
-                        players[i].total += players[i].hand[j].value;
-                    }
-
-                    for (let k=0;k<player_ace_count;k++){
-                        if (players[i].total < 12){
-                            players[i].total += 10;
-                        }
+                    if(players[i].socket == socket.id){
+                        players[i].status = "waiting";
+                        console.log(players[i].status);
                     }
                 }
-                players[0].status = "current";
-                io.emit("game_updated", {players:players, dealer:dealer})
-            }
+                start_status = "ready";
+                    for (let i=0;i<players.length;i++){
+                        if (players[i].status == "joined" || players[i].status == "current" || players[i].status == "busted"){
+                            start_status = "waiting";
+                        }
+                    }
 
+                if (start_status == "waiting"){
+                    io.emit("status_update", {players:players})
+                } else{
+                    dealer = new Player("dealer", 1);
+                    new_deck = new Deck();
+                    dealer.draw(new_deck);
+                    dealer.draw(new_deck);
+                    for (let i=0;i<players.length;i++){
+                        players[i].hand = [];
+                        players[i].total = 0;
+                        players[i].draw(new_deck);
+                        players[i].draw(new_deck);
+                        let player_ace_count = 0;
+                        for(let j=0;j<players[i].hand.length;j++){
+                            if (players[i].hand[j].value == 1){
+                                player_ace_count++;
+                            }
+                            players[i].total += players[i].hand[j].value;
+                        }
+
+                        for (let k=0;k<player_ace_count;k++){
+                            if (players[i].total < 12){
+                                players[i].total += 10;
+                            }
+                        }
+                    }
+                    players[0].status = "current";
+                    start_status = "playing";
+                    console.log("game status ", start_status)
+                    io.emit("game_updated", {players:players, dealer:dealer})
+                }
+            }
             // console.log("start game received")
             // new_deck = new Deck();
             // console.log(new_deck.cards.length)
@@ -281,6 +286,8 @@ io.sockets.on('connection', function(socket){
                 }
             }
             io.emit("game_complete", {players:players, dealer: dealer});
+            start_status = "ready";
+            console.log("game over", start_status)
             for (let m=0;m<players.length;m++){
                 players[m].status = "joined";
             }    
@@ -328,7 +335,7 @@ io.sockets.on('connection', function(socket){
             }
             if (dealer.status == "busted"){
                 for (let i=0;i<players.length;i++){
-                    if (players[i].status== "busted"){
+                    if (players[i].status == "busted"){
                         players[i].status == "Lost";
                     } else if (players[i].status == "stayed"){
                         players[i].status = "Won";
@@ -336,7 +343,9 @@ io.sockets.on('connection', function(socket){
                 }
             } else {
                 for (let i=0; i< players.length;i++){
-                    if (players[i].total == dealer.total){
+                    if (players[i].status = "busted"){
+                        players[i].status = "Lost";
+                    }else if (players[i].total == dealer.total){
                         players[i].status = "Push";
                     } else if ( players[i].total > dealer.total){
                         players[i].status = "Won";
@@ -346,6 +355,8 @@ io.sockets.on('connection', function(socket){
                 }
             }
             io.emit("game_complete", {players:players, dealer: dealer});
+            start_status = "ready";
+            console.log("game over", start_status)
             for (let m=0;m<players.length;m++){
                 players[m].status = "joined";
             }  
